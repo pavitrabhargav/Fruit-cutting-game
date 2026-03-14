@@ -1,7 +1,8 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Fruit Cutting Game</title>
 
 <style>
@@ -9,7 +10,7 @@
 body{
 margin:0;
 overflow:hidden;
-background:#222;
+background:#1e90ff;
 font-family:Arial;
 }
 
@@ -21,72 +22,159 @@ display:block;
 position:absolute;
 top:10px;
 left:20px;
+font-size:22px;
 color:white;
-font-size:26px;
+text-shadow:2px 2px black;
+}
+
+#lives{
+position:absolute;
+top:40px;
+left:20px;
+font-size:20px;
+color:red;
+}
+
+#highscore{
+position:absolute;
+top:70px;
+left:20px;
+font-size:18px;
+color:yellow;
+}
+
+#startScreen{
+position:absolute;
+top:50%;
+left:50%;
+transform:translate(-50%,-50%);
+text-align:center;
+}
+
+#startBtn,#restartBtn{
+padding:15px 30px;
+font-size:20px;
+border:none;
+border-radius:8px;
+background:#ff9800;
+color:white;
+cursor:pointer;
+}
+
+#restartBtn{
+display:none;
 }
 
 </style>
-
 </head>
 
 <body>
 
-<div id="score">Score:0</div>
+<div id="score">Score: 0</div>
+<div id="lives">Lives: ❤️❤️❤️</div>
+<div id="highscore">High Score: 0</div>
 
-<canvas id="game"></canvas>
+<div id="startScreen">
+<h1 style="color:white">FRUIT CUTTING GAME</h1>
+<button id="startBtn">START GAME</button>
+<br><br>
+<button id="restartBtn">RESTART</button>
+</div>
+
+<canvas id="gameCanvas"></canvas>
 
 <script>
 
-const canvas=document.getElementById("game")
+const canvas=document.getElementById("gameCanvas")
 const ctx=canvas.getContext("2d")
 
 canvas.width=window.innerWidth
 canvas.height=window.innerHeight
 
-let fruits=[]
-let pieces=[]
-let particles=[]
-
 let score=0
+let lives=3
+let items=[]
+let pieces=[]
+let gameRunning=false
+let speed=3
 
-let mouseX=0
-let mouseY=0
-let slicing=false
+const scoreText=document.getElementById("score")
+const livesText=document.getElementById("lives")
+const highScoreText=document.getElementById("highscore")
+
+const startBtn=document.getElementById("startBtn")
+const restartBtn=document.getElementById("restartBtn")
+
+let highScore=localStorage.getItem("fruitHighScore") || 0
+highScoreText.innerText="High Score: "+highScore
+
+/* SLICE TRAIL */
 
 let trail=[]
 
-const fruitList=["🍎","🍉","🍊","🍌","🍍","🥝"]
+function drawTrail(){
 
-/* FRUIT */
+ctx.beginPath()
 
-class Fruit{
+for(let i=0;i<trail.length;i++){
 
-constructor(){
+ctx.lineTo(trail[i].x,trail[i].y)
 
-this.x=Math.random()*canvas.width
-this.y=-60
+}
 
-this.speed=3+Math.random()*3
+ctx.strokeStyle="white"
+ctx.lineWidth=4
+ctx.stroke()
 
-this.radius=35
+}
 
-this.type=Math.random()<0.15?"bomb":"fruit"
+/* IMAGES */
 
-this.emoji=this.type==="bomb"?"💣":fruitList[Math.floor(Math.random()*fruitList.length)]
+let bombImg=new Image()
+bombImg.src="bomb.png"
+
+/* AUDIO */
+
+let blastSound=new Audio("blast.mp3")
+let cutSound=new Audio("cut.mp3")
+let bgMusic=new Audio("backgroundaudio.mp3")
+bgMusic.loop=true
+
+/* FRUITS */
+
+let fruits=["🍎","🍉","🍌","🍇","🍊","🍍"]
+
+class Item{
+
+constructor(x){
+
+this.x=x
+this.y=-50
+this.radius=30
+this.type=Math.random()<0.2?"bomb":"fruit"
+this.emoji=fruits[Math.floor(Math.random()*fruits.length)]
+this.speed=speed+Math.random()*2
 
 }
 
 draw(){
 
-ctx.font="50px Arial"
-ctx.fillText(this.emoji,this.x-25,this.y+25)
+if(this.type==="bomb"){
+
+ctx.drawImage(bombImg,this.x-30,this.y-30,60,60)
+
+}else{
+
+ctx.font="45px Arial"
+ctx.fillText(this.emoji,this.x-20,this.y+20)
+
+}
 
 }
 
 update(){
 
 this.y+=this.speed
-
 this.draw()
 
 }
@@ -97,16 +185,13 @@ this.draw()
 
 class Piece{
 
-constructor(x,y,vx,emoji){
+constructor(x,y,emoji,dir){
 
 this.x=x
 this.y=y
-
-this.vx=vx
-this.vy=-3
-
-this.gravity=0.5
-
+this.vx=dir*4
+this.vy=-5
+this.gravity=0.4
 this.emoji=emoji
 
 }
@@ -121,7 +206,6 @@ ctx.fillText(this.emoji,this.x,this.y)
 update(){
 
 this.vy+=this.gravity
-
 this.x+=this.vx
 this.y+=this.vy
 
@@ -131,78 +215,44 @@ this.draw()
 
 }
 
-/* JUICE PARTICLES */
+function spawnItem(){
 
-class Particle{
+if(!gameRunning) return
 
-constructor(x,y){
-
-this.x=x
-this.y=y
-
-this.vx=(Math.random()-0.5)*8
-this.vy=(Math.random()-0.5)*8
-
-this.life=30
+let x=Math.random()*(canvas.width-60)+30
+items.push(new Item(x))
 
 }
 
-draw(){
+function updateLives(){
+
+let hearts=""
+
+for(let i=0;i<lives;i++){
+hearts+="❤️"
+}
+
+livesText.innerText="Lives: "+hearts
+
+}
+
+function gameOver(){
+
+gameRunning=false
+
+bgMusic.pause()
+
+ctx.fillStyle="rgba(0,0,0,0.6)"
+ctx.fillRect(0,0,canvas.width,canvas.height)
 
 ctx.fillStyle="red"
+ctx.font="60px Arial"
+ctx.textAlign="center"
+ctx.fillText("GAME OVER",canvas.width/2,canvas.height/2)
 
-ctx.beginPath()
-
-ctx.arc(this.x,this.y,3,0,Math.PI*2)
-
-ctx.fill()
-
-}
-
-update(){
-
-this.x+=this.vx
-this.y+=this.vy
-
-this.life--
-
-this.draw()
+restartBtn.style.display="block"
 
 }
-
-}
-
-/* SPAWN */
-
-function spawnFruit(){
-
-fruits.push(new Fruit())
-
-}
-
-setInterval(spawnFruit,900)
-
-/* SLICE TRAIL */
-
-function drawTrail(){
-
-ctx.beginPath()
-
-for(let i=0;i<trail.length;i++){
-
-ctx.lineTo(trail[i].x,trail[i].y)
-
-}
-
-ctx.strokeStyle="white"
-
-ctx.lineWidth=6
-
-ctx.stroke()
-
-}
-
-/* GAME LOOP */
 
 function animate(){
 
@@ -210,61 +260,84 @@ ctx.clearRect(0,0,canvas.width,canvas.height)
 
 drawTrail()
 
-/* FRUITS */
+for(let i=items.length-1;i>=0;i--){
 
-for(let i=fruits.length-1;i>=0;i--){
+items[i].update()
 
-let f=fruits[i]
+if(mouseDown){
 
-f.update()
-
-let dx=mouseX-f.x
-let dy=mouseY-f.y
-
+let dx=mouseX-items[i].x
+let dy=mouseY-items[i].y
 let dist=Math.sqrt(dx*dx+dy*dy)
 
-if(dist<f.radius && slicing){
+if(dist<items[i].radius){
 
-if(f.type==="bomb"){
+if(items[i].type==="fruit"){
 
-alert("GAME OVER")
-
-location.reload()
-
-}else{
+cutSound.play()
 
 score++
 
-document.getElementById("score").innerText="Score:"+score
+scoreText.innerText="Score: "+score
 
-/* SPLIT */
+/* SPLIT FRUIT */
 
-pieces.push(new Piece(f.x,f.y,-5,f.emoji))
-pieces.push(new Piece(f.x,f.y,5,f.emoji))
+pieces.push(new Piece(items[i].x,items[i].y,items[i].emoji,-1))
+pieces.push(new Piece(items[i].x,items[i].y,items[i].emoji,1))
 
-/* SPLASH */
+if(score>highScore){
 
-for(let p=0;p<12;p++){
+highScore=score
+localStorage.setItem("fruitHighScore",highScore)
+highScoreText.innerText="High Score: "+highScore
 
-particles.push(new Particle(f.x,f.y))
+}
+
+if(score%10==0) speed+=0.5
+
+items.splice(i,1)
+continue
+
+}else{
+
+if(navigator.vibrate) navigator.vibrate(300)
+
+blastSound.play()
+
+gameOver()
+
+return
 
 }
 
 }
 
-fruits.splice(i,1)
+}
+
+if(items[i].y>canvas.height){
+
+if(items[i].type==="fruit"){
+
+lives--
+
+updateLives()
+
+if(lives<=0){
+
+gameOver()
+return
 
 }
 
-if(f.y>canvas.height+100){
+}
 
-fruits.splice(i,1)
+items.splice(i,1)
 
 }
 
 }
 
-/* PIECES */
+/* UPDATE PIECES */
 
 for(let i=pieces.length-1;i>=0;i--){
 
@@ -278,38 +351,27 @@ pieces.splice(i,1)
 
 }
 
-/* PARTICLES */
-
-for(let i=particles.length-1;i>=0;i--){
-
-particles[i].update()
-
-if(particles[i].life<=0){
-
-particles.splice(i,1)
-
-}
-
-}
-
+if(gameRunning)
 requestAnimationFrame(animate)
 
 }
 
-animate()
-
 /* MOUSE */
+
+let mouseX=0
+let mouseY=0
+let mouseDown=false
 
 canvas.addEventListener("mousemove",e=>{
 
 mouseX=e.clientX
 mouseY=e.clientY
 
-if(slicing){
+if(mouseDown){
 
 trail.push({x:mouseX,y:mouseY})
 
-if(trail.length>20) trail.shift()
+if(trail.length>10) trail.shift()
 
 }
 
@@ -317,30 +379,28 @@ if(trail.length>20) trail.shift()
 
 canvas.addEventListener("mousedown",()=>{
 
-slicing=true
+mouseDown=true
 trail=[]
 
 })
 
 canvas.addEventListener("mouseup",()=>{
 
-slicing=false
+mouseDown=false
 trail=[]
 
 })
-
-/* TOUCH */
 
 canvas.addEventListener("touchmove",e=>{
 
 mouseX=e.touches[0].clientX
 mouseY=e.touches[0].clientY
 
-if(slicing){
+if(mouseDown){
 
 trail.push({x:mouseX,y:mouseY})
 
-if(trail.length>20) trail.shift()
+if(trail.length>10) trail.shift()
 
 }
 
@@ -348,17 +408,59 @@ if(trail.length>20) trail.shift()
 
 canvas.addEventListener("touchstart",()=>{
 
-slicing=true
+mouseDown=true
 trail=[]
 
 })
 
 canvas.addEventListener("touchend",()=>{
 
-slicing=false
+mouseDown=false
 trail=[]
 
 })
+
+/* START GAME */
+
+startBtn.onclick=function(){
+
+startBtn.style.display="none"
+
+gameRunning=true
+
+bgMusic.play()
+
+animate()
+
+}
+
+/* RESTART */
+
+restartBtn.onclick=function(){
+
+score=0
+lives=3
+items=[]
+pieces=[]
+speed=3
+
+scoreText.innerText="Score: 0"
+updateLives()
+
+restartBtn.style.display="none"
+
+gameRunning=true
+
+bgMusic.currentTime=0
+bgMusic.play()
+
+animate()
+
+}
+
+updateLives()
+
+setInterval(spawnItem,1000)
 
 </script>
 
