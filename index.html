@@ -1,13 +1,16 @@
-<!DOCTYPE html><html lang="en">
+<!DOCTYPE html>
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Fruit Catch Game</title><style>
+<title>Fruit Cutting Game</title>
+
+<style>
 
 body{
 margin:0;
 overflow:hidden;
-background:#87CEEB;
+background:#1e90ff;
 font-family:Arial;
 }
 
@@ -18,63 +21,69 @@ display:block;
 #score{
 position:absolute;
 top:10px;
-left:70px;
-font-size:24px;
+left:20px;
+font-size:22px;
 color:white;
 text-shadow:2px 2px black;
+}
+
+#lives{
+position:absolute;
+top:40px;
+left:20px;
+font-size:20px;
+color:red;
 }
 
 #highscore{
 position:absolute;
-top:40px;
-left:70px;
+top:70px;
+left:20px;
 font-size:18px;
 color:yellow;
-text-shadow:2px 2px black;
 }
 
-#restart{
+#startScreen{
 position:absolute;
 top:50%;
 left:50%;
 transform:translate(-50%,-50%);
+text-align:center;
+}
+
+#startBtn,#restartBtn{
 padding:15px 30px;
 font-size:20px;
+border:none;
+border-radius:8px;
+background:#ff9800;
+color:white;
+cursor:pointer;
+}
+
+#restartBtn{
 display:none;
 }
 
-</style></head><body><div style="position:fixed;top:10px;left:10px;z-index:1000;">
-<button onclick="toggleMenu()" style="
-font-size:20px;
-background:#222;
-color:white;
-border:none;
-padding:6px 10px;
-border-radius:5px;
-cursor:pointer;
-">☰</button><div id="menuBox" style="
-display:none;
-margin-top:5px;
-background:#222;
-padding:10px;
-border-radius:6px;
-"><a href="index.html" style="display:block;color:white;text-decoration:none;margin:5px 0;">Home</a>
-<a href="about.html" style="display:block;color:white;text-decoration:none;margin:5px 0;">About</a>
-<a href="contact.html" style="display:block;color:white;text-decoration:none;margin:5px 0;">Contact</a>
-<a href="privacy.html" style="display:block;color:white;text-decoration:none;margin:5px 0;">Privacy Policy</a>
+</style>
+</head>
 
+<body>
+
+<div id="score">Score: 0</div>
+<div id="lives">Lives: ❤️❤️❤️</div>
+<div id="highscore">High Score: 0</div>
+
+<div id="startScreen">
+<h1 style="color:white">FRUIT CUTTING GAME</h1>
+<button id="startBtn">START GAME</button>
+<br><br>
+<button id="restartBtn">RESTART</button>
 </div>
-</div><div id="score">Score: 0</div>
-<div id="highscore">High Score: 0</div><button id="restart">Restart Game</button>
 
 <canvas id="gameCanvas"></canvas>
 
 <script>
-
-function toggleMenu(){
-let menu=document.getElementById("menuBox");
-menu.style.display=(menu.style.display==="block")?"none":"block";
-}
 
 const canvas=document.getElementById("gameCanvas")
 const ctx=canvas.getContext("2d")
@@ -83,47 +92,47 @@ canvas.width=window.innerWidth
 canvas.height=window.innerHeight
 
 let score=0
+let lives=3
 let items=[]
-let isGameOver=false
+let gameRunning=false
+let speed=3
 
 const scoreText=document.getElementById("score")
+const livesText=document.getElementById("lives")
 const highScoreText=document.getElementById("highscore")
-const restartBtn=document.getElementById("restart")
 
-/* HIGH SCORE LOAD */
+const startBtn=document.getElementById("startBtn")
+const restartBtn=document.getElementById("restartBtn")
+
 let highScore=localStorage.getItem("fruitHighScore") || 0
 highScoreText.innerText="High Score: "+highScore
 
-let basket={
-x:canvas.width/2-60,
-y:canvas.height-70,
-width:120,
-height:40
-}
+/* IMAGES */
 
 let bombImg=new Image()
 bombImg.src="bomb.png"
 
 /* AUDIO */
-let bgMusic=new Audio("backgroundaudio.mp3")
-bgMusic.loop=true
-bgMusic.volume=0.5
 
 let blastSound=new Audio("blast.mp3")
+let cutSound=new Audio("cut.mp3")
+let bgMusic=new Audio("backgroundaudio.mp3")
+bgMusic.loop=true
 
-/* EMOJIS */
-let fruits=["🍎","🍌","🍉","🍇","🍊","🙂"]
+/* FRUITS */
+
+let fruits=["🍎","🍉","🍌","🍇","🍊","🍍"]
 
 class Item{
 
-constructor(x,type){
+constructor(x){
 
 this.x=x
-this.y=-30
-this.type=type
-this.radius=25
-this.speed=3+Math.random()*2
+this.y=-50
+this.radius=30
+this.type=Math.random()<0.2?"bomb":"fruit"
 this.emoji=fruits[Math.floor(Math.random()*fruits.length)]
+this.speed=speed+Math.random()*2
 
 }
 
@@ -135,8 +144,8 @@ ctx.drawImage(bombImg,this.x-30,this.y-30,60,60)
 
 }else{
 
-ctx.font="40px Arial"
-ctx.fillText(this.emoji,this.x-15,this.y+15)
+ctx.font="45px Arial"
+ctx.fillText(this.emoji,this.x-20,this.y+20)
 
 }
 
@@ -153,68 +162,29 @@ this.draw()
 
 function spawnItem(){
 
-if(isGameOver) return
-if(items.length>15) return
+if(!gameRunning) return
 
 let x=Math.random()*(canvas.width-60)+30
-let type=Math.random()<0.2?"bomb":"fruit"
-
-items.push(new Item(x,type))
+items.push(new Item(x))
 
 }
 
-function drawBasket(){
+function updateLives(){
 
-ctx.fillStyle="brown"
-ctx.fillRect(basket.x,basket.y,basket.width,basket.height)
+let hearts=""
 
+for(let i=0;i<lives;i++){
+hearts+="❤️"
 }
 
-function collision(it){
-
-if(
-it.y+it.radius>=basket.y &&
-it.x+it.radius>=basket.x &&
-it.x-it.radius<=basket.x+basket.width
-){
-
-if(it.type==="fruit"){
-
-score++
-scoreText.innerText="Score: "+score
-
-/* HIGH SCORE SAVE */
-if(score>highScore){
-highScore=score
-localStorage.setItem("fruitHighScore",highScore)
-highScoreText.innerText="High Score: "+highScore
-}
-
-return true
-
-}else{
-
-/* VIBRATION */
-if(navigator.vibrate){
-navigator.vibrate(300)
-}
-
-blastSound.play()
-gameOver()
-
-}
-
-}
-
-if(it.y>canvas.height) return true
-
-return false
+livesText.innerText="Lives: "+hearts
 
 }
 
 function gameOver(){
 
-isGameOver=true
+gameRunning=false
+
 bgMusic.pause()
 
 ctx.fillStyle="rgba(0,0,0,0.6)"
@@ -233,59 +203,152 @@ function animate(){
 
 ctx.clearRect(0,0,canvas.width,canvas.height)
 
-drawBasket()
-
 for(let i=items.length-1;i>=0;i--){
+
 items[i].update()
-if(collision(items[i])) items.splice(i,1)
+
+/* TOUCH COLLISION */
+
+if(mouseDown){
+
+let dx=mouseX-items[i].x
+let dy=mouseY-items[i].y
+let dist=Math.sqrt(dx*dx+dy*dy)
+
+if(dist<items[i].radius){
+
+if(items[i].type==="fruit"){
+
+cutSound.play()
+
+score++
+
+scoreText.innerText="Score: "+score
+
+if(score>highScore){
+
+highScore=score
+localStorage.setItem("fruitHighScore",highScore)
+highScoreText.innerText="High Score: "+highScore
+
 }
 
-if(!isGameOver)
+/* SPEED INCREASE */
+
+if(score%10==0) speed+=0.5
+
+items.splice(i,1)
+continue
+
+}else{
+
+if(navigator.vibrate) navigator.vibrate(300)
+
+blastSound.play()
+
+gameOver()
+
+return
+
+}
+
+}
+
+}
+
+/* MISS FRUIT */
+
+if(items[i].y>canvas.height){
+
+if(items[i].type==="fruit"){
+
+lives--
+
+updateLives()
+
+if(lives<=0){
+
+gameOver()
+return
+
+}
+
+}
+
+items.splice(i,1)
+
+}
+
+}
+
+if(gameRunning)
 requestAnimationFrame(animate)
 
 }
 
-/* START MUSIC */
-function startMusic(){
-bgMusic.play().catch(()=>{})
-document.removeEventListener("touchstart",startMusic)
-document.removeEventListener("mousedown",startMusic)
-}
+/* MOUSE */
 
-document.addEventListener("touchstart",startMusic)
-document.addEventListener("mousedown",startMusic)
-
-/* MOVE BASKET */
+let mouseX=0
+let mouseY=0
+let mouseDown=false
 
 canvas.addEventListener("mousemove",e=>{
+mouseX=e.clientX
+mouseY=e.clientY
+})
 
-basket.x=e.clientX-basket.width/2
+canvas.addEventListener("mousedown",()=>{
+mouseDown=true
+})
 
-if(basket.x<0) basket.x=0
-if(basket.x+basket.width>canvas.width)
-basket.x=canvas.width-basket.width
-
+canvas.addEventListener("mouseup",()=>{
+mouseDown=false
 })
 
 canvas.addEventListener("touchmove",e=>{
 
-e.preventDefault()
-
-basket.x=e.touches[0].clientX-basket.width/2
-
-if(basket.x<0) basket.x=0
-if(basket.x+basket.width>canvas.width)
-basket.x=canvas.width-basket.width
+mouseX=e.touches[0].clientX
+mouseY=e.touches[0].clientY
 
 })
+
+canvas.addEventListener("touchstart",()=>{
+mouseDown=true
+})
+
+canvas.addEventListener("touchend",()=>{
+mouseDown=false
+})
+
+/* START GAME */
+
+startBtn.onclick=function(){
+
+startBtn.style.display="none"
+
+gameRunning=true
+
+bgMusic.play()
+
+animate()
+
+}
+
+/* RESTART */
 
 restartBtn.onclick=function(){
 
 score=0
+lives=3
 items=[]
-isGameOver=false
-restartBtn.style.display="none"
+speed=3
+
 scoreText.innerText="Score: 0"
+updateLives()
+
+restartBtn.style.display="none"
+
+gameRunning=true
 
 bgMusic.currentTime=0
 bgMusic.play()
@@ -294,17 +357,11 @@ animate()
 
 }
 
-setInterval(spawnItem,1200)
+updateLives()
 
-animate()
+setInterval(spawnItem,1000)
 
-window.addEventListener("resize",()=>{
+</script>
 
-canvas.width=window.innerWidth
-canvas.height=window.innerHeight
-basket.y=canvas.height-70
-
-})
-
-</script></body>
+</body>
 </html>
