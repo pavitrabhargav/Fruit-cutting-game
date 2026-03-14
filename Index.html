@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fruit Catch Game</title>
+
+<style>
+
+body{
+margin:0;
+overflow:hidden;
+background:#87CEEB;
+font-family:Arial;
+}
+
+canvas{
+display:block;
+}
+
+#score{
+position:absolute;
+top:10px;
+left:10px;
+font-size:26px;
+color:white;
+text-shadow:2px 2px black;
+}
+
+#restart{
+position:absolute;
+top:50%;
+left:50%;
+transform:translate(-50%,-50%);
+padding:15px 30px;
+font-size:20px;
+display:none;
+}
+
+</style>
+</head>
+
+<body>
+
+<div id="score">Score: 0</div>
+<button id="restart">Restart Game</button>
+
+<canvas id="gameCanvas"></canvas>
+
+<script>
+
+const canvas=document.getElementById("gameCanvas")
+const ctx=canvas.getContext("2d")
+
+canvas.width=window.innerWidth
+canvas.height=window.innerHeight
+
+let score=0
+let items=[]
+let isGameOver=false
+
+const scoreText=document.getElementById("score")
+const restartBtn=document.getElementById("restart")
+
+let basket={
+x:canvas.width/2-60,
+y:canvas.height-70,
+width:120,
+height:40
+}
+
+let bombImg=new Image()
+bombImg.src="bomb.png"
+
+class Item{
+
+constructor(x,type){
+
+this.x=x
+this.y=-30
+this.type=type
+this.radius=25
+this.speed=3+Math.random()*2
+
+this.color=["yellow","orange","green","purple"][Math.floor(Math.random()*4)]
+
+}
+
+draw(){
+
+if(this.type==="bomb"){
+
+ctx.drawImage(bombImg,this.x-30,this.y-30,60,60)
+
+}else{
+
+ctx.beginPath()
+ctx.arc(this.x,this.y,this.radius,0,Math.PI*2)
+ctx.fillStyle=this.color
+ctx.fill()
+
+}
+
+}
+
+update(){
+
+this.y+=this.speed
+this.draw()
+
+}
+
+}
+
+function spawnItem(){
+
+if(isGameOver) return
+if(items.length>15) return
+
+let x=Math.random()*(canvas.width-60)+30
+let type=Math.random()<0.2?"bomb":"fruit"
+
+items.push(new Item(x,type))
+
+}
+
+function drawBasket(){
+
+ctx.fillStyle="brown"
+ctx.fillRect(basket.x,basket.y,basket.width,basket.height)
+
+}
+
+function collision(it){
+
+if(
+
+it.y+it.radius>=basket.y &&
+it.x+it.radius>=basket.x &&
+it.x-it.radius<=basket.x+basket.width
+
+){
+
+if(it.type==="fruit"){
+
+score++
+scoreText.innerText="Score: "+score
+return true
+
+}else{
+
+gameOver()
+
+}
+
+}
+
+if(it.y>canvas.height) return true
+
+return false
+
+}
+
+function gameOver(){
+
+isGameOver=true
+
+ctx.fillStyle="rgba(0,0,0,0.6)"
+ctx.fillRect(0,0,canvas.width,canvas.height)
+
+ctx.fillStyle="red"
+ctx.font="60px Arial"
+ctx.textAlign="center"
+ctx.fillText("GAME OVER",canvas.width/2,canvas.height/2)
+
+restartBtn.style.display="block"
+
+}
+
+function animate(){
+
+ctx.clearRect(0,0,canvas.width,canvas.height)
+
+drawBasket()
+
+for(let i=items.length-1;i>=0;i--){
+
+items[i].update()
+
+if(collision(items[i])) items.splice(i,1)
+
+}
+
+if(!isGameOver)
+requestAnimationFrame(animate)
+
+}
+
+canvas.addEventListener("mousemove",e=>{
+
+basket.x=e.clientX-basket.width/2
+
+if(basket.x<0) basket.x=0
+if(basket.x+basket.width>canvas.width)
+basket.x=canvas.width-basket.width
+
+})
+
+canvas.addEventListener("touchmove",e=>{
+
+e.preventDefault()
+
+basket.x=e.touches[0].clientX-basket.width/2
+
+if(basket.x<0) basket.x=0
+if(basket.x+basket.width>canvas.width)
+basket.x=canvas.width-basket.width
+
+})
+
+restartBtn.onclick=function(){
+
+score=0
+items=[]
+isGameOver=false
+restartBtn.style.display="none"
+scoreText.innerText="Score: 0"
+
+animate()
+
+}
+
+setInterval(spawnItem,1200)
+
+animate()
+
+window.addEventListener("resize",()=>{
+
+canvas.width=window.innerWidth
+canvas.height=window.innerHeight
+basket.y=canvas.height-70
+
+})
+
+</script>
+
+</body>
+  </html>
