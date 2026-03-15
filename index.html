@@ -221,6 +221,11 @@ restartBtn.onclick=function(){
 updateLives()
 setInterval(spawnItem,1000)
 </script>
-
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('service-worker.js')
+    .then(() => console.log('Service Worker Registered'));
+}
+</script>
 </body>
 </html>
