@@ -24,9 +24,9 @@ display:block;
 position:absolute;
 top:10px;
 right:15px;
-font-size:28px;
+font-size:30px;
 cursor:pointer;
-z-index:10;
+z-index:1000;
 }
 
 /* MENU PANEL */
@@ -40,12 +40,13 @@ border-radius:10px;
 padding:10px;
 display:none;
 box-shadow:0 0 10px rgba(0,0,0,0.4);
+z-index:1000;
 }
 
 #menuPanel button{
 display:block;
 margin:5px 0;
-width:150px;
+width:160px;
 padding:8px;
 border:none;
 background:#ff9800;
@@ -154,31 +155,29 @@ const restartBtn=document.getElementById("restartBtn")
 let highScore=localStorage.getItem("fruitHighScore") || 0
 highScoreText.innerText="High Score: "+highScore
 
-/* MENU */
+
+/* HOME MENU */
 
 const menuIcon=document.getElementById("menuIcon")
 const menuPanel=document.getElementById("menuPanel")
 
-menuIcon.onclick=function(){
+menuIcon.addEventListener("click",function(){
 
-menuPanel.style.display=
-menuPanel.style.display=="block"?"none":"block"
-
+if(menuPanel.style.display==="block"){
+menuPanel.style.display="none"
+}else{
+menuPanel.style.display="block"
 }
 
-/* MENU FUNCTIONS */
+})
+
 
 function showAbout(){
 
 alert(
 "ABOUT GAME\n\n"+
-"Fruit Cutting Game is a fun arcade slicing game inspired by classic fruit slicing games.\n\n"+
-"In this game you must slice fruits that fall from the top of the screen.\n"+
-"Be careful! If you slice a bomb the game will end immediately.\n\n"+
-"Features:\n"+
-"- Slice fruits with your finger\n"+
-"- Avoid bombs\n"+
-"- Score points and beat your high score\n\n"+
+"Fruit Cutting Game is a fun arcade slicing game.\n"+
+"Slice fruits and avoid bombs.\n\n"+
 "Developed by Pavitra Bhargav."
 )
 
@@ -188,9 +187,8 @@ function showPrivacy(){
 
 alert(
 "PRIVACY POLICY\n\n"+
-"This game does not collect, store, or share any personal information.\n\n"+
-"No login is required and no personal data is transmitted.\n\n"+
-"The game only stores your High Score locally on your device using browser storage."
+"This game does not collect any personal data.\n"+
+"High score is stored only on your device."
 )
 
 }
@@ -199,13 +197,13 @@ function showContact(){
 
 alert(
 "CONTACT\n\n"+
-"If you have any questions, suggestions or feedback regarding this game,\n"+
-please contact us.\n\n"+
 "Email: pavitrabhargav@gmail.com"
 )
 
-  }
-/* SLICE TRAIL */
+}
+
+
+/* TRAIL */
 
 let trail=[]
 
@@ -225,10 +223,12 @@ ctx.stroke()
 
 }
 
+
 /* IMAGES */
 
 let bombImg=new Image()
 bombImg.src="bomb.png"
+
 
 /* AUDIO */
 
@@ -237,9 +237,11 @@ let cutSound=new Audio("cut.mp3")
 let bgMusic=new Audio("backgroundaudio.mp3")
 bgMusic.loop=true
 
+
 /* FRUITS */
 
 let fruits=["🍎","🍉","🍌","🍇","🍊","🍍"]
+
 
 class Item{
 
@@ -278,6 +280,7 @@ this.draw()
 
 }
 
+
 /* CUT PIECES */
 
 class Piece{
@@ -311,6 +314,7 @@ this.draw()
 
 }
 
+
 function spawnItem(){
 
 if(!gameRunning) return
@@ -319,6 +323,7 @@ let x=Math.random()*(canvas.width-60)+30
 items.push(new Item(x))
 
 }
+
 
 function updateLives(){
 
@@ -331,6 +336,7 @@ hearts+="❤️"
 livesText.innerText="Lives: "+hearts
 
 }
+
 
 function gameOver(){
 
@@ -349,6 +355,7 @@ ctx.fillText("GAME OVER",canvas.width/2,canvas.height/2)
 restartBtn.style.display="block"
 
 }
+
 
 function animate(){
 
@@ -387,19 +394,13 @@ highScoreText.innerText="High Score: "+highScore
 
 }
 
-if(score%10==0) speed+=0.5
-
 items.splice(i,1)
 continue
 
 }else{
 
-if(navigator.vibrate) navigator.vibrate(300)
-
 blastSound.play()
-
 gameOver()
-
 return
 
 }
@@ -431,8 +432,6 @@ items.splice(i,1)
 
 }
 
-/* UPDATE PIECES */
-
 for(let i=pieces.length-1;i>=0;i--){
 
 pieces[i].update()
@@ -450,11 +449,13 @@ requestAnimationFrame(animate)
 
 }
 
+
 /* MOUSE */
 
 let mouseX=0
 let mouseY=0
 let mouseDown=false
+
 
 canvas.addEventListener("mousemove",e=>{
 
@@ -471,12 +472,14 @@ if(trail.length>10) trail.shift()
 
 })
 
+
 canvas.addEventListener("mousedown",()=>{
 
 mouseDown=true
 trail=[]
 
 })
+
 
 canvas.addEventListener("mouseup",()=>{
 
@@ -485,36 +488,8 @@ trail=[]
 
 })
 
-canvas.addEventListener("touchmove",e=>{
 
-mouseX=e.touches[0].clientX
-mouseY=e.touches[0].clientY
-
-if(mouseDown){
-
-trail.push({x:mouseX,y:mouseY})
-
-if(trail.length>10) trail.shift()
-
-}
-
-})
-
-canvas.addEventListener("touchstart",()=>{
-
-mouseDown=true
-trail=[]
-
-})
-
-canvas.addEventListener("touchend",()=>{
-
-mouseDown=false
-trail=[]
-
-})
-
-/* START GAME */
+/* START */
 
 startBtn.onclick=function(){
 
@@ -527,6 +502,7 @@ bgMusic.play()
 animate()
 
 }
+
 
 /* RESTART */
 
@@ -552,6 +528,7 @@ animate()
 
 }
 
+
 updateLives()
 
 setInterval(spawnItem,1000)
@@ -559,4 +536,4 @@ setInterval(spawnItem,1000)
 </script>
 
 </body>
-  </html>
+</html>
