@@ -18,6 +18,42 @@ canvas{
 display:block;
 }
 
+/* HOME ICON */
+
+#menuIcon{
+position:absolute;
+top:10px;
+right:15px;
+font-size:28px;
+cursor:pointer;
+z-index:10;
+}
+
+/* MENU PANEL */
+
+#menuPanel{
+position:absolute;
+top:50px;
+right:10px;
+background:white;
+border-radius:10px;
+padding:10px;
+display:none;
+box-shadow:0 0 10px rgba(0,0,0,0.4);
+}
+
+#menuPanel button{
+display:block;
+margin:5px 0;
+width:150px;
+padding:8px;
+border:none;
+background:#ff9800;
+color:white;
+border-radius:5px;
+cursor:pointer;
+}
+
 #score{
 position:absolute;
 top:10px;
@@ -70,6 +106,16 @@ display:none;
 
 <body>
 
+<!-- HOME ICON -->
+<div id="menuIcon">🏠</div>
+
+<!-- MENU -->
+<div id="menuPanel">
+<button onclick="showAbout()">About</button>
+<button onclick="showPrivacy()">Privacy Policy</button>
+<button onclick="showContact()">Contact</button>
+</div>
+
 <div id="score">Score: 0</div>
 <div id="lives">Lives: ❤️❤️❤️</div>
 <div id="highscore">High Score: 0</div>
@@ -107,6 +153,38 @@ const restartBtn=document.getElementById("restartBtn")
 
 let highScore=localStorage.getItem("fruitHighScore") || 0
 highScoreText.innerText="High Score: "+highScore
+
+/* MENU */
+
+const menuIcon=document.getElementById("menuIcon")
+const menuPanel=document.getElementById("menuPanel")
+
+menuIcon.onclick=function(){
+
+menuPanel.style.display=
+menuPanel.style.display=="block"?"none":"block"
+
+}
+
+/* MENU FUNCTIONS */
+
+function showAbout(){
+
+alert("Fruit Cutting Game\nCreated by Pavitra Bhargav")
+
+}
+
+function showPrivacy(){
+
+alert("This game does not collect any personal data.")
+
+}
+
+function showContact(){
+
+alert("Contact: pavitrabhargav@gmail.com")
+
+}
 
 /* SLICE TRAIL */
 
@@ -208,7 +286,6 @@ update(){
 this.vy+=this.gravity
 this.x+=this.vx
 this.y+=this.vy
-
 this.draw()
 
 }
@@ -279,8 +356,6 @@ cutSound.play()
 score++
 
 scoreText.innerText="Score: "+score
-
-/* SPLIT FRUIT */
 
 pieces.push(new Piece(items[i].x,items[i].y,items[i].emoji,-1))
 pieces.push(new Piece(items[i].x,items[i].y,items[i].emoji,1))
@@ -465,4 +540,4 @@ setInterval(spawnItem,1000)
 </script>
 
 </body>
-</html>
+  </html>
